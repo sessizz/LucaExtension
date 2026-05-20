@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Luca Captcha ve Firma Doldurucu",
+  "version": "1.1",
+  "description": "Luca captcha cozer ve kayitli firma bilgilerini login alanlarina doldurur.",
+  "icons": {
+    "128": "assets/store-icon-128.png"
+  },
+  "permissions": [
+    "contextMenus",
+    "storage",
+    "scripting",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://openrouter.ai/*",
+    "https://agiris.luca.com.tr/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://agiris.luca.com.tr/*"],
+      "all_frames": true,
+      "js": ["content.js"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}
