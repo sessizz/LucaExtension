@@ -28,4 +28,4 @@ Kullanici, uzantiyi Chrome'dan kaldirarak yerel olarak saklanan uzanti verilerin
 
 ## Iletisim
 
-E-posta: Buraya iletisim e-postasi eklenmelidir.
+E-posta: alperbah@gmail.com
