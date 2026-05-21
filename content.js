@@ -126,13 +126,6 @@ function clickLucaLoginButton() {
     loginButton.click();
 }
 
-function toggleLucaPanel() {
-    const panel = document.getElementById("luca-autofill-panel");
-    if (!panel) return;
-
-    panel.style.display = panel.style.display === "none" ? "block" : "none";
-}
-
 function renderLucaCompanies(companies, onCompanyClick) {
     const list = document.getElementById("luca-company-list");
     if (!list) return;
@@ -189,7 +182,7 @@ function renderLucaCompanies(companies, onCompanyClick) {
 }
 
 function initLucaAutofillPanel() {
-    if (lucaPanelReady || document.getElementById("luca-autofill-button")) return;
+    if (lucaPanelReady || document.getElementById("luca-autofill-panel")) return;
 
     const memberNoInput = document.getElementById("musteriNo") || document.querySelector('input[name="musteriNo"]');
     const usernameInput = document.getElementById("kullaniciAdi") || document.querySelector('input[name="kullaniciAdi"]');
@@ -199,45 +192,15 @@ function initLucaAutofillPanel() {
 
     lucaPanelReady = true;
 
-    const button = document.createElement("button");
-    button.id = "luca-autofill-button";
-    button.type = "button";
-    button.textContent = "Luca Firma";
-    button.style.cssText = [
-        "all:initial",
-        "position:fixed",
-        "top:14px",
-        "right:14px",
-        "z-index:2147483647",
-        "box-sizing:border-box",
-        "display:flex",
-        "align-items:center",
-        "justify-content:center",
-        "min-width:112px",
-        "height:34px",
-        "padding:9px 12px",
-        "border:0",
-        "border-radius:6px",
-        "background:#1f6feb",
-        "color:#fff",
-        "font:700 13px Arial,sans-serif",
-        "line-height:1",
-        "text-align:center",
-        "white-space:nowrap",
-        "box-shadow:0 4px 14px rgba(0,0,0,.22)",
-        "cursor:pointer",
-        "appearance:none"
-    ].join(";");
-
     const panel = document.createElement("div");
     panel.id = "luca-autofill-panel";
     panel.style.cssText = [
         "all:initial",
         "position:fixed",
-        "top:58px",
+        "top:14px",
         "right:14px",
         "z-index:2147483647",
-        "display:none",
+        "display:block",
         "box-sizing:border-box",
         "width:286px",
         "padding:14px",
@@ -264,7 +227,6 @@ function initLucaAutofillPanel() {
     panel.appendChild(title);
     panel.appendChild(list);
     panel.appendChild(status);
-    document.documentElement.appendChild(button);
     document.documentElement.appendChild(panel);
 
     let companies = [];
@@ -273,7 +235,6 @@ function initLucaAutofillPanel() {
         companies = Array.isArray(result.luca_companies) ? result.luca_companies : [];
         renderLucaCompanies(companies, (company) => {
             fillLucaLogin(company);
-            panel.style.display = "none";
         });
     });
 
@@ -282,11 +243,8 @@ function initLucaAutofillPanel() {
         companies = Array.isArray(changes.luca_companies.newValue) ? changes.luca_companies.newValue : [];
         renderLucaCompanies(companies, (company) => {
             fillLucaLogin(company);
-            panel.style.display = "none";
         });
     });
-
-    button.addEventListener("click", toggleLucaPanel);
 }
 
 function checkForLucaLogin() {
