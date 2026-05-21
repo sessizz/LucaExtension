@@ -133,16 +133,16 @@ function toggleLucaPanel() {
     panel.style.display = panel.style.display === "none" ? "block" : "none";
 }
 
-function renderLucaCompanies(companies) {
-    const select = document.getElementById("luca-company-select");
-    if (!select) return;
+function renderLucaCompanies(companies, onCompanyClick) {
+    const list = document.getElementById("luca-company-list");
+    if (!list) return;
 
-    select.innerHTML = "";
+    list.innerHTML = "";
     if (!companies.length) {
-        const option = document.createElement("option");
-        option.value = "";
-        option.textContent = "Kayitli firma yok";
-        select.appendChild(option);
+        const empty = document.createElement("div");
+        empty.textContent = "Kayitli firma yok";
+        empty.style.cssText = "all:initial;display:block;padding:10px 8px;color:#566773;font:13px Arial,sans-serif;text-align:center;";
+        list.appendChild(empty);
         return;
     }
 
@@ -150,10 +150,41 @@ function renderLucaCompanies(companies) {
         .slice()
         .sort((a, b) => a.name.localeCompare(b.name, "tr"))
         .forEach((company) => {
-            const option = document.createElement("option");
-            option.value = company.id;
-            option.textContent = company.name;
-            select.appendChild(option);
+            const companyButton = document.createElement("button");
+            companyButton.type = "button";
+            companyButton.textContent = company.name;
+            companyButton.style.cssText = [
+                "all:initial",
+                "box-sizing:border-box",
+                "display:flex",
+                "align-items:center",
+                "justify-content:flex-start",
+                "width:100%",
+                "min-height:38px",
+                "padding:9px 11px",
+                "margin:0 0 7px",
+                "border:1px solid #d0d7de",
+                "border-radius:6px",
+                "background:#f8fafc",
+                "color:#17202a",
+                "font:700 13px Arial,sans-serif",
+                "line-height:1.2",
+                "text-align:left",
+                "cursor:pointer",
+                "appearance:none"
+            ].join(";");
+
+            companyButton.addEventListener("mouseenter", () => {
+                companyButton.style.background = "#eaf2ff";
+                companyButton.style.borderColor = "#1f6feb";
+            });
+            companyButton.addEventListener("mouseleave", () => {
+                companyButton.style.background = "#f8fafc";
+                companyButton.style.borderColor = "#d0d7de";
+            });
+            companyButton.addEventListener("click", () => onCompanyClick(company));
+
+            list.appendChild(companyButton);
         });
 }
 
@@ -222,53 +253,16 @@ function initLucaAutofillPanel() {
     title.textContent = "Firma sec";
     title.style.cssText = "all:initial;display:block;font:700 13px Arial,sans-serif;color:#17202a;margin-bottom:10px;";
 
-    const select = document.createElement("select");
-    select.id = "luca-company-select";
-    select.style.cssText = [
-        "all:revert",
-        "box-sizing:border-box",
-        "display:block",
-        "width:100%",
-        "height:40px",
-        "padding:0 10px",
-        "margin:0 0 10px",
-        "border:1px solid #b7c0c7",
-        "border-radius:6px",
-        "background:#fff",
-        "color:#17202a",
-        "font:13px Arial,sans-serif"
-    ].join(";");
-
-    const fillButton = document.createElement("button");
-    fillButton.type = "button";
-    fillButton.textContent = "Doldur";
-    fillButton.style.cssText = [
-        "all:initial",
-        "box-sizing:border-box",
-        "display:flex",
-        "align-items:center",
-        "justify-content:center",
-        "width:100%",
-        "height:36px",
-        "padding:0 12px",
-        "border:0",
-        "border-radius:6px",
-        "background:#137333",
-        "color:#fff",
-        "font:700 13px Arial,sans-serif",
-        "line-height:1",
-        "text-align:center",
-        "cursor:pointer",
-        "appearance:none"
-    ].join(";");
+    const list = document.createElement("div");
+    list.id = "luca-company-list";
+    list.style.cssText = "all:initial;box-sizing:border-box;display:block;max-height:260px;overflow:auto;";
 
     const status = document.createElement("div");
     status.id = "luca-autofill-status";
     status.style.cssText = "all:initial;display:block;min-height:16px;margin-top:9px;font:12px Arial,sans-serif;";
 
     panel.appendChild(title);
-    panel.appendChild(select);
-    panel.appendChild(fillButton);
+    panel.appendChild(list);
     panel.appendChild(status);
     document.documentElement.appendChild(button);
     document.documentElement.appendChild(panel);
@@ -277,25 +271,22 @@ function initLucaAutofillPanel() {
 
     chrome.storage.local.get(["luca_companies"], (result) => {
         companies = Array.isArray(result.luca_companies) ? result.luca_companies : [];
-        renderLucaCompanies(companies);
+        renderLucaCompanies(companies, (company) => {
+            fillLucaLogin(company);
+            panel.style.display = "none";
+        });
     });
 
     chrome.storage.onChanged.addListener((changes, areaName) => {
         if (areaName !== "local" || !changes.luca_companies) return;
         companies = Array.isArray(changes.luca_companies.newValue) ? changes.luca_companies.newValue : [];
-        renderLucaCompanies(companies);
+        renderLucaCompanies(companies, (company) => {
+            fillLucaLogin(company);
+            panel.style.display = "none";
+        });
     });
 
     button.addEventListener("click", toggleLucaPanel);
-    fillButton.addEventListener("click", () => {
-        const selected = companies.find((company) => company.id === select.value);
-        if (!selected) {
-            showLucaStatus("Once firma kaydedin.", true);
-            return;
-        }
-
-        fillLucaLogin(selected);
-    });
 }
 
 function checkForLucaLogin() {
