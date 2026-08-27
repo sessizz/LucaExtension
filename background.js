@@ -48,13 +48,14 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         },
         body: JSON.stringify({
           "model": "openrouter/auto", 
+          "max_tokens": 20,
           "messages": [
             {
               "role": "user",
               "content": [
                 {
                   "type": "text",
-                  "text": "Bu resimdeki karakterleri oku. Bazı resimlerde g ile 9 karışıyor ona dikkat et. s ile S yani küçük büyük de karışıyor, v ile V gibi dikkat et. SADECE resimde okuduğun karakterleri BİTİŞİK olarak yaz. Aralarına KESİNLİKLE boşluk koyma. Başka hiçbir kelime veya yorum ekleme."
+                  "text": "Bu resimdeki karakterleri oku. Bazı resimlerde g ile 9 karışıyor ona dikkat et. s ile S yani küçük büyük de karışıyor, v ile V gibi dikkat et. SADECE resimde okuduğun karakterleri BİTİŞİK olarak yaz. Aralarına KESİNLİKLE boşluk koyma. Başka hiçbir kelime veya yorum ekleme. Harflerin hepsi küçük."
                 },
                 {
                   "type": "image_url",
@@ -114,13 +115,14 @@ async function processAutoWithAI(base64Image, sendResponse) {
           },
           body: JSON.stringify({
             "model": "openrouter/auto", 
+            "max_tokens": 20,
             "messages": [
               {
                 "role": "user",
                 "content": [
                   {
                     "type": "text",
-                    "text": "Bu resimdeki karakterleri oku. Bazı resimlerde g ile 9 karışıyor ona dikkat et. s ile S yani küçük büyük de karışıyor, v ile V gibi dikkat et. SADECE resimde okuduğun karakterleri BİTİŞİK olarak yaz. Aralarına KESİNLİKLE boşluk koyma. Başka hiçbir kelime veya yorum ekleme."
+                    "text": "Bu resimdeki karakterleri oku. Bazı resimlerde g ile 9 karışıyor ona dikkat et. s ile S yani küçük büyük de karışıyor, v ile V gibi dikkat et. SADECE resimde okuduğun karakterleri BİTİŞİK olarak yaz. Aralarına KESİNLİKLE boşluk koyma. Başka hiçbir kelime veya yorum ekleme.  Harflerin hepsi küçük."
                   },
                   {
                     "type": "image_url",
@@ -135,7 +137,8 @@ async function processAutoWithAI(base64Image, sendResponse) {
         const data = await response.json();
   
         if (!response.ok || data.error) {
-          sendResponse({ success: false, error: "API_HATA" });
+          const errorMsg = data.error?.message || `HTTP ${response.status} ${response.statusText}`;
+          sendResponse({ success: false, error: errorMsg });
           return;
         }
   
@@ -147,7 +150,7 @@ async function processAutoWithAI(base64Image, sendResponse) {
         }
   
       } catch (error) {
-          sendResponse({ success: false, error: "BAĞLANTI_HATASI" });
+          sendResponse({ success: false, error: error.message || "BAĞLANTI_HATASI" });
       }
 }
 
