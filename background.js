@@ -76,7 +76,13 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       }
 
       if (data.choices && data.choices.length > 0) {
-        let characterText = data.choices[0].message.content.replace(/\s+/g, '');
+        const content = data.choices[0]?.message?.content;
+        if (typeof content !== "string" || !content.trim()) {
+          updateModalText(tab.id, "HATA: API boş metin döndü.", data.model || "Bilinmeyen Model");
+          return;
+        }
+
+        let characterText = content.replace(/\s+/g, '');
         const usedModel = data.model || "Bilinmeyen Model";
         updateModalText(tab.id, characterText, usedModel);
       } else {
@@ -143,7 +149,13 @@ async function processAutoWithAI(base64Image, sendResponse) {
         }
   
         if (data.choices && data.choices.length > 0) {
-          let characterText = data.choices[0].message.content.replace(/\s+/g, '');
+          const content = data.choices[0]?.message?.content;
+          if (typeof content !== "string" || !content.trim()) {
+            sendResponse({ success: false, error: "API boş metin döndü" });
+            return;
+          }
+
+          let characterText = content.replace(/\s+/g, '');
           sendResponse({ success: true, text: characterText });
         } else {
           sendResponse({ success: false, error: "BOŞ_YANIT" });
