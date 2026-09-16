@@ -47,8 +47,9 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
           "X-Title": "Karakter Cevirici"
         },
         body: JSON.stringify({
-          "model": "openrouter/auto", 
+          "model": "google/gemini-2.5-flash-lite",
           "max_tokens": 20,
+          "reasoning": { "effort": "none" },
           "messages": [
             {
               "role": "user",
@@ -120,8 +121,9 @@ async function processAutoWithAI(base64Image, sendResponse) {
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            "model": "openrouter/auto", 
+            "model": "google/gemini-2.5-flash-lite",
             "max_tokens": 20,
+            "reasoning": { "effort": "none" },
             "messages": [
               {
                 "role": "user",
