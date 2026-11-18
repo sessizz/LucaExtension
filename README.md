@@ -12,6 +12,7 @@ Chrome uzantisi; `https://agiris.luca.com.tr/` adresindeki Luca giris ekraninda 
   - Sitenin `otpauth://totp/...` QR'i ve Google Authenticator "Hesaplari aktar" QR'i (`otpauth-migration://`) desteklenir; aktarma QR'inda birden cok hesap varsa firmaya ait olan secilir.
   - Kodlar yerelde (Web Crypto, RFC 6238) uretilir; hicbir yere gonderilmez. Popup'ta her firmanin guncel kodu ve kalan suresi gorunur, tiklayinca kopyalanir.
   - Otomatik gonderim firma secimi basina bir kez yapilir; kod reddedilirse panelden firma tekrar secilir.
+  - Bilgiler elle yazilsa da calisir: uye no + kullanici adi kayitli bir firmayla eslesirse (kullanici adi buyuk/kucuk harf duyarsiz) o firma panelden secilmis sayilir ve 2FA kodu otomatik yazilir.
 - 2FA aktif olmayan hesaplarda captcha cozumu eskisi gibi calisir: sayfada hangisi cikarsa o doldurulur.
 - Captcha cozumu icin OpenAI uyumlu (`/chat/completions`) bir gorsel model kullanir:
   - **OpenRouter** (varsayilan, `google/gemini-2.5-flash-lite`)

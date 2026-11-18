@@ -107,10 +107,9 @@ function rememberSelectedCompany(companyId) {
     }
 }
 
-function takeSelectedCompanyId() {
+function peekSelectedCompanyId() {
     try {
         const raw = sessionStorage.getItem(SELECTED_COMPANY_KEY);
-        sessionStorage.removeItem(SELECTED_COMPANY_KEY);
         if (!raw) return null;
         const selected = JSON.parse(raw);
         return Date.now() - selected.at < SELECTED_COMPANY_TTL_MS ? selected.id : null;
@@ -118,6 +117,85 @@ function takeSelectedCompanyId() {
         return null;
     }
 }
+
+function forgetSelectedCompany() {
+    try {
+        sessionStorage.removeItem(SELECTED_COMPANY_KEY);
+    } catch (e) {
+        // yok sayilir
+    }
+}
+
+function takeSelectedCompanyId() {
+    const id = peekSelectedCompanyId();
+    forgetSelectedCompany();
+    return id;
+}
+
+// --- Elle giris: uye no + kullanici adi kayitli bir firmayla eslesirse o firma secilmis sayilir ---
+
+let lastRecognizedCompanyId = null;
+
+function sameLogin(company, memberNo, username) {
+    return String(company.memberNo || "").trim() === memberNo &&
+        String(company.username || "").trim().toLocaleLowerCase("tr-TR") === username.toLocaleLowerCase("tr-TR");
+}
+
+function syncSelectionFromLoginFields() {
+    const inputs = findLoginInputs();
+    if (!inputs) return;
+
+    const memberNo = inputs.memberNoInput.value.trim();
+    const username = inputs.usernameInput.value.trim();
+
+    // Panelden secilen firma alanlarla hala uyusuyorsa ona dokunma.
+    const current = lucaCompanies.find((item) => item.id === peekSelectedCompanyId());
+    if (current && sameLogin(current, memberNo, username)) return;
+
+    const matches = memberNo && username
+        ? lucaCompanies.filter((item) => sameLogin(item, memberNo, username))
+        : [];
+    // Ayni giris bilgisiyle birden cok kayit varsa 2FA'si olan tercih edilir.
+    const match = matches.find((item) => item.otp) || matches[0];
+
+    if (!match) {
+        forgetSelectedCompany();
+        lastRecognizedCompanyId = null;
+        return;
+    }
+
+    rememberSelectedCompany(match.id);
+    if (lastRecognizedCompanyId !== match.id) {
+        lastRecognizedCompanyId = match.id;
+        showLucaStatus(`${match.name} tanindi.${match.otp ? " 2FA kodu otomatik yazilacak." : ""}`, false);
+    }
+}
+
+function isLoginField(target) {
+    const inputs = findLoginInputs();
+    return !!inputs && (target === inputs.memberNoInput || target === inputs.usernameInput);
+}
+
+function isLoginButton(button) {
+    const text = buttonText(button);
+    return text === "GIRIS" || text === "GİRİŞ";
+}
+
+document.addEventListener("input", (event) => {
+    if (isLoginField(event.target)) syncSelectionFromLoginFields();
+}, true);
+document.addEventListener("change", (event) => {
+    if (isLoginField(event.target)) syncSelectionFromLoginFields();
+}, true);
+// Tarayicinin otomatik doldurmasi olay gondermeyebilir: GIRIS'e basilirken ve Enter'da son kez okunur.
+document.addEventListener("click", (event) => {
+    const button = event.target && event.target.closest &&
+        event.target.closest('input[type="button"], input[type="submit"], button');
+    if (button && isLoginButton(button)) syncSelectionFromLoginFields();
+}, true);
+document.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && findLoginInputs()) syncSelectionFromLoginFields();
+}, true);
 
 function setNativeInputValue(input, value) {
     const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
@@ -154,13 +232,14 @@ function findOtpInput() {
     return input;
 }
 
+function buttonText(button) {
+    return (button.value || button.textContent || "").trim().toLocaleUpperCase("tr-TR");
+}
+
 function findButtonByText(root, ...labels) {
     const wanted = labels.map((label) => label.toLocaleUpperCase("tr-TR"));
     return Array.from(root.querySelectorAll('input[type="button"], input[type="submit"], button'))
-        .find((button) => {
-            const text = (button.value || button.textContent || "").trim().toLocaleUpperCase("tr-TR");
-            return wanted.includes(text);
-        });
+        .find((button) => wanted.includes(buttonText(button)));
 }
 
 function fillLucaLogin(company) {
@@ -180,7 +259,8 @@ function fillLucaLogin(company) {
 }
 
 function clickLucaLoginButton() {
-    const loginButton = findButtonByText(document, "GIRIS", "GİRİŞ");
+    const loginButton = Array.from(document.querySelectorAll('input[type="button"], input[type="submit"], button'))
+        .find(isLoginButton);
 
     if (!loginButton) {
         showLucaStatus("Giris butonu bulunamadi.", true);
