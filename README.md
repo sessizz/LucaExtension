@@ -21,6 +21,7 @@ Chrome uzantisi; `https://agiris.luca.com.tr/` adresindeki Luca giris ekraninda 
 - Saglayici, model ve API anahtari uzanti penceresinden ayarlanir.
 - Captcha cevabi gecerli gorunuyorsa (3-10 harf/rakam) `Tamam`a kendisi basar; yanlis okumalarda Luca'ya durmadan giris gitmesin diye 5 dakikada en fazla 3 kez.
 - Yapay zeka bos metin dondururse sayfa yenilenip yeni captcha istenir (arka arkaya en fazla 3 kez; giris alanlarina klavyeden yazilmaya baslandiysa yenilenmez).
+- Bu iki davranis (bos yanitta yenileme, Tamam'a otomatik basma) uzanti penceresindeki **Captcha Davranisi** bolumunden ayri ayri kapatilabilir; varsayilan olarak aciktir.
 - Ayarlari, firma bilgilerini ve 2FA anahtarlarini Chrome `storage.local` alaninda **sifresiz** saklar.
 - Firma listesi JSON olarak disa/ice aktarilabilir (yedek dosyasi parola ve 2FA anahtarlarini sifresiz icerir).
 

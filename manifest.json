@@ -28,7 +28,7 @@
     {
       "matches": ["https://agiris.luca.com.tr/*"],
       "all_frames": true,
-      "js": ["totp.js", "content.js"]
+      "js": ["totp.js", "providers.js", "content.js"]
     }
   ],
   "action": {

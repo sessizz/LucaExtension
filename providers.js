@@ -88,6 +88,19 @@ function validateSettings(settings) {
   return null;
 }
 
+// Captcha davranis ayarlari (popup'tan acilip kapatilir). Kayit yoksa ikisi de acik.
+const CAPTCHA_OPTION_KEYS = ["captcha_reload_on_empty", "captcha_auto_submit"];
+
+function resolveCaptchaOptions(stored) {
+  return {
+    reloadOnEmpty: stored.captcha_reload_on_empty !== false,
+    autoSubmit: stored.captcha_auto_submit !== false
+  };
+}
+
 if (typeof module !== "undefined") {
-  module.exports = { CAPTCHA_PROMPT, PROVIDERS, SETTINGS_KEYS, resolveSettings, buildChatRequest, validateSettings };
+  module.exports = {
+    CAPTCHA_PROMPT, PROVIDERS, SETTINGS_KEYS, CAPTCHA_OPTION_KEYS,
+    resolveSettings, buildChatRequest, validateSettings, resolveCaptchaOptions
+  };
 }

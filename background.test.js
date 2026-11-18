@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const { PROVIDERS, resolveSettings, buildChatRequest, validateSettings } = require('./providers.js');
+const { PROVIDERS, resolveSettings, buildChatRequest, validateSettings, resolveCaptchaOptions } = require('./providers.js');
 
 const IMAGE = 'data:image/png;base64,AAAA';
 
@@ -58,4 +58,22 @@ test('empty captcha answers are flagged so content.js can reload for a new captc
   assert.match(source, /sendResponse\(\{ success: false, error: [^}]*code: error\.code \}\)/);
   const content = fs.readFileSync('content.js', 'utf8');
   assert.match(content, /response\.code === "EMPTY_RESPONSE"/);
+});
+
+test('captcha options default to on and can be switched off', () => {
+  assert.deepEqual(resolveCaptchaOptions({}), { reloadOnEmpty: true, autoSubmit: true });
+  assert.deepEqual(
+    resolveCaptchaOptions({ captcha_reload_on_empty: false, captcha_auto_submit: false }),
+    { reloadOnEmpty: false, autoSubmit: false }
+  );
+  assert.deepEqual(
+    resolveCaptchaOptions({ captcha_reload_on_empty: true, captcha_auto_submit: false }),
+    { reloadOnEmpty: true, autoSubmit: false }
+  );
+});
+
+test('content script loads providers.js before content.js', () => {
+  const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
+  const js = manifest.content_scripts[0].js;
+  assert.ok(js.indexOf('providers.js') !== -1 && js.indexOf('providers.js') < js.indexOf('content.js'));
 });

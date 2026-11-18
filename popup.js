@@ -22,6 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const importBtn = document.getElementById('importBtn');
   const importFile = document.getElementById('importFile');
   const openTabLink = document.getElementById('openTab');
+  const optReloadOnEmpty = document.getElementById('optReloadOnEmpty');
+  const optAutoSubmit = document.getElementById('optAutoSubmit');
 
   let companies = [];
   let editingCompanyId = null;
@@ -415,7 +417,24 @@ document.addEventListener('DOMContentLoaded', () => {
     applyProviderUi(providerSelect.value);
   });
 
-  chrome.storage.local.get([...SETTINGS_KEYS, 'luca_companies'], (result) => {
+  // --- Captcha davranisi (isaretlenince hemen kaydedilir) ---
+
+  function bindCaptchaOption(checkbox, key) {
+    checkbox.addEventListener('change', () => {
+      chrome.storage.local.set({ [key]: checkbox.checked }, () => {
+        showStatus(checkbox.checked ? 'Ayar acildi.' : 'Ayar kapatildi.');
+      });
+    });
+  }
+
+  bindCaptchaOption(optReloadOnEmpty, 'captcha_reload_on_empty');
+  bindCaptchaOption(optAutoSubmit, 'captcha_auto_submit');
+
+  chrome.storage.local.get([...SETTINGS_KEYS, ...CAPTCHA_OPTION_KEYS, 'luca_companies'], (result) => {
+    const captchaOptions = resolveCaptchaOptions(result);
+    optReloadOnEmpty.checked = captchaOptions.reloadOnEmpty;
+    optAutoSubmit.checked = captchaOptions.autoSubmit;
+
     const settings = resolveSettings(result);
     providerSelect.value = settings.providerId;
     baseUrlInput.value = settings.baseUrl;

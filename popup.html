@@ -31,6 +31,8 @@
     .otp-drop:focus, .otp-drop.dragover { border-color: #1f6feb; color: #1f6feb; }
     #otpChoices button { display: block; width: 100%; margin-top: 6px; text-align: left; background: #eaf2ff; color: #17202a; border: 1px solid #1f6feb; font-weight: 400; }
     .hint { font-size: 11px; color: #78909c; margin: 6px 0 0; }
+    label.check { display: flex; align-items: flex-start; gap: 6px; margin: 6px 0; font-weight: 400; color: #17202a; cursor: pointer; }
+    label.check input { width: auto; margin: 1px 0 0; padding: 0; }
   </style>
 </head>
 <body>
@@ -50,6 +52,10 @@
   <label for="apiKey">API Anahtari</label>
   <input type="password" id="apiKey" placeholder="sk-...">
   <button id="saveBtn" class="full">Ayarlari Kaydet</button>
+
+  <h4>Captcha Davranisi</h4>
+  <label class="check"><input type="checkbox" id="optReloadOnEmpty"> Yapay zeka bos yanit dondururse sayfayi yenile (arka arkaya en fazla 3 kez)</label>
+  <label class="check"><input type="checkbox" id="optAutoSubmit"> Gecerli captcha cevabinda Tamam'a otomatik bas (5 dakikada en fazla 3 kez)</label>
 
   <h4>Luca Firma Bilgileri</h4>
   <label for="companyName">Firma Adi</label>

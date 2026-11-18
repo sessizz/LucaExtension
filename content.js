@@ -35,6 +35,21 @@ function stopLoadingAnimation(resultText) {
     }
 }
 
+let captchaOptions = resolveCaptchaOptions({});
+const captchaOptionsLoaded = new Promise((resolve) => {
+    chrome.storage.local.get(CAPTCHA_OPTION_KEYS, (result) => {
+        captchaOptions = resolveCaptchaOptions(result);
+        resolve();
+    });
+});
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== "local" || !CAPTCHA_OPTION_KEYS.some((key) => key in changes)) return;
+    chrome.storage.local.get(CAPTCHA_OPTION_KEYS, (result) => {
+        captchaOptions = resolveCaptchaOptions(result);
+    });
+});
+
 // API bos metin donerse yeni captcha icin sayfa yenilenir. Ayar bozuksa sonsuz
 // donguye girmesin diye arka arkaya en fazla CAPTCHA_MAX_RELOADS kez.
 const CAPTCHA_RELOAD_KEY = "lucaCaptchaEmptyReloads";
@@ -63,7 +78,12 @@ function reloadPage() {
     location.reload();
 }
 
-function handleEmptyCaptchaResponse() {
+function handleEmptyCaptchaResponse(message) {
+    if (!captchaOptions.reloadOnEmpty) {
+        stopLoadingAnimation(message || "API boş metin döndü");
+        return;
+    }
+
     const count = readCaptchaReloads();
 
     if (count >= CAPTCHA_MAX_RELOADS) {
@@ -102,6 +122,7 @@ function recentCaptchaSubmits() {
 }
 
 function autoSubmitCaptcha(answer) {
+    if (!captchaOptions.autoSubmit) return;
     // Giris alanlari ayni sayfadaysa gonderim GIRIS ile yapilir; ona kullanici ya da panel basar.
     if (findLoginInputs()) return;
     // Cumle, bos ya da tuhaf karakterli cevaplar gonderilmez; kullanici kontrol eder.
@@ -126,6 +147,19 @@ function autoSubmitCaptcha(answer) {
     setTimeout(() => button.click(), 300);
 }
 
+function handleCaptchaResponse(response) {
+    if (response && response.success) {
+        writeCaptchaReloads(0);
+        stopLoadingAnimation(response.text);
+        autoSubmitCaptcha(response.text);
+    } else if (response && response.code === "EMPTY_RESPONSE") {
+        handleEmptyCaptchaResponse(response.error);
+    } else {
+        const errMsg = (response && response.error) ? response.error : "HATA";
+        stopLoadingAnimation(errMsg);
+    }
+}
+
 function processImage(imgEl) {
     if (hasRun) return;
     hasRun = true;
@@ -138,16 +172,7 @@ function processImage(imgEl) {
         const base64Image = getBase64FromImage(imgEl);
 
         chrome.runtime.sendMessage({ action: "autoSolve", imageBase64: base64Image }, (response) => {
-            if (response && response.success) {
-                writeCaptchaReloads(0);
-                stopLoadingAnimation(response.text);
-                autoSubmitCaptcha(response.text);
-            } else if (response && response.code === "EMPTY_RESPONSE") {
-                handleEmptyCaptchaResponse();
-            } else {
-                const errMsg = (response && response.error) ? response.error : "HATA";
-                stopLoadingAnimation(errMsg);
-            }
+            captchaOptionsLoaded.then(() => handleCaptchaResponse(response));
         });
     } catch (err) {
         stopLoadingAnimation("KOPYALAMA HATASI");
