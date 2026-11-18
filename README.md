@@ -19,6 +19,7 @@ Chrome uzantisi; `https://agiris.luca.com.tr/` adresindeki Luca giris ekraninda 
   - **OpenAI** (`gpt-4.1-mini`)
   - **Ozel**: OpenAI uyumlu herhangi bir API adresi (Ollama, LM Studio, Groq vb.). Kaydederken o adres icin tarayici izni istenir; API anahtari istege baglidir.
 - Saglayici, model ve API anahtari uzanti penceresinden ayarlanir.
+- Yapay zeka bos metin dondururse sayfa yenilenip yeni captcha istenir (arka arkaya en fazla 3 kez; giris alanlarina klavyeden yazilmaya baslandiysa yenilenmez).
 - Ayarlari, firma bilgilerini ve 2FA anahtarlarini Chrome `storage.local` alaninda **sifresiz** saklar.
 - Firma listesi JSON olarak disa/ice aktarilabilir (yedek dosyasi parola ve 2FA anahtarlarini sifresiz icerir).
 

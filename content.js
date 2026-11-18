@@ -35,6 +35,55 @@ function stopLoadingAnimation(resultText) {
     }
 }
 
+// API bos metin donerse yeni captcha icin sayfa yenilenir. Ayar bozuksa sonsuz
+// donguye girmesin diye arka arkaya en fazla CAPTCHA_MAX_RELOADS kez.
+const CAPTCHA_RELOAD_KEY = "lucaCaptchaEmptyReloads";
+const CAPTCHA_MAX_RELOADS = 3;
+// Kullanici giris alanlarina klavyeden yazdiysa yenileme yazdiklarini silmesin.
+let loginTypedByUser = false;
+
+function readCaptchaReloads() {
+    try {
+        return Number(sessionStorage.getItem(CAPTCHA_RELOAD_KEY)) || 0;
+    } catch (e) {
+        return CAPTCHA_MAX_RELOADS;
+    }
+}
+
+function writeCaptchaReloads(count) {
+    try {
+        if (count) sessionStorage.setItem(CAPTCHA_RELOAD_KEY, String(count));
+        else sessionStorage.removeItem(CAPTCHA_RELOAD_KEY);
+    } catch (e) {
+        // yok sayilir
+    }
+}
+
+function reloadPage() {
+    location.reload();
+}
+
+function handleEmptyCaptchaResponse() {
+    const count = readCaptchaReloads();
+
+    if (count >= CAPTCHA_MAX_RELOADS) {
+        writeCaptchaReloads(0);
+        stopLoadingAnimation(`BOS YANIT (${count} deneme)`);
+        return;
+    }
+
+    if (loginTypedByUser) {
+        stopLoadingAnimation("BOS YANIT - sayfayi yenileyin");
+        return;
+    }
+
+    writeCaptchaReloads(count + 1);
+    stopLoadingAnimation(`BOS YANIT, yenileniyor (${count + 1}/${CAPTCHA_MAX_RELOADS})`);
+    setTimeout(() => {
+        if (!loginTypedByUser) reloadPage();
+    }, 800);
+}
+
 function processImage(imgEl) {
     if (hasRun) return;
     hasRun = true;
@@ -48,7 +97,10 @@ function processImage(imgEl) {
 
         chrome.runtime.sendMessage({ action: "autoSolve", imageBase64: base64Image }, (response) => {
             if (response && response.success) {
+                writeCaptchaReloads(0);
                 stopLoadingAnimation(response.text);
+            } else if (response && response.code === "EMPTY_RESPONSE") {
+                handleEmptyCaptchaResponse();
             } else {
                 const errMsg = (response && response.error) ? response.error : "HATA";
                 stopLoadingAnimation(errMsg);
@@ -194,7 +246,12 @@ document.addEventListener("click", (event) => {
     if (button && isLoginButton(button)) syncSelectionFromLoginFields();
 }, true);
 document.addEventListener("keydown", (event) => {
-    if (event.key === "Enter" && findLoginInputs()) syncSelectionFromLoginFields();
+    const inputs = findLoginInputs();
+    if (!inputs) return;
+    if ([inputs.memberNoInput, inputs.usernameInput, inputs.passwordInput].includes(event.target)) {
+        loginTypedByUser = true;
+    }
+    if (event.key === "Enter") syncSelectionFromLoginFields();
 }, true);
 
 function setNativeInputValue(input, value) {

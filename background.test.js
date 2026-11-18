@@ -51,3 +51,11 @@ test('background.js loads providers.js and has a single request path', () => {
   assert.equal((source.match(/fetch\(url, init\)/g) || []).length, 1);
   assert.doesNotMatch(source, /openrouter\.ai/);
 });
+
+test('empty captcha answers are flagged so content.js can reload for a new captcha', () => {
+  const source = fs.readFileSync('background.js', 'utf8');
+  assert.match(source, /error\.code = "EMPTY_RESPONSE"/);
+  assert.match(source, /sendResponse\(\{ success: false, error: [^}]*code: error\.code \}\)/);
+  const content = fs.readFileSync('content.js', 'utf8');
+  assert.match(content, /response\.code === "EMPTY_RESPONSE"/);
+});

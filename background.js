@@ -48,7 +48,9 @@ async function solveCaptcha(base64Image) {
 
   const content = data.choices?.[0]?.message?.content;
   if (typeof content !== "string" || !content.trim()) {
-    throw new Error("API boş metin döndü");
+    const error = new Error("API boş metin döndü");
+    error.code = "EMPTY_RESPONSE"; // content.js bu durumda sayfayi yenileyip yeni captcha alir
+    throw error;
   }
 
   return { text: content.replace(/\s+/g, ''), model: data.model || settings.model };
@@ -75,7 +77,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "autoSolve") {
         solveCaptcha(request.imageBase64)
             .then((result) => sendResponse({ success: true, text: result.text }))
-            .catch((error) => sendResponse({ success: false, error: error.message || "BAĞLANTI_HATASI" }));
+            .catch((error) => sendResponse({ success: false, error: error.message || "BAĞLANTI_HATASI", code: error.code }));
         return true; // Asenkron cevap için gerekli
     }
 });
