@@ -8,7 +8,7 @@
     h3 { margin: 0 0 10px; font-size: 16px; }
     h4 { margin: 18px 0 8px; font-size: 14px; }
     label { display: block; margin: 8px 0 4px; font-size: 12px; font-weight: 700; color: #34495e; }
-    input { width: 100%; margin-bottom: 8px; padding: 7px; border: 1px solid #cfd8dc; border-radius: 4px; }
+    input, select { width: 100%; margin-bottom: 8px; padding: 7px; border: 1px solid #cfd8dc; border-radius: 4px; }
     button { padding: 8px; cursor: pointer; border: 0; border-radius: 4px; background: #1f6feb; color: white; font-weight: 700; }
     button.secondary { background: #607d8b; }
     button.danger { background: #d93025; }
@@ -21,10 +21,19 @@
   </style>
 </head>
 <body>
-  <h3>OpenRouter Ayarlari</h3>
-  <label for="apiKey">API Anahtariniz:</label>
-  <input type="password" id="apiKey" placeholder="sk-or-v1-...">
-  <button id="saveBtn" class="full">API Anahtarini Kaydet</button>
+  <h3>Yapay Zeka Ayarlari</h3>
+  <label for="provider">Saglayici</label>
+  <select id="provider"></select>
+
+  <label for="baseUrl">API Adresi (Base URL)</label>
+  <input type="text" id="baseUrl" placeholder="https://.../v1">
+
+  <label for="model">Model</label>
+  <input type="text" id="model" placeholder="model-adi">
+
+  <label for="apiKey">API Anahtari</label>
+  <input type="password" id="apiKey" placeholder="sk-...">
+  <button id="saveBtn" class="full">Ayarlari Kaydet</button>
 
   <h4>Luca Firma Bilgileri</h4>
   <label for="companyName">Firma Adi</label>
@@ -47,6 +56,7 @@
   <div id="companyList"></div>
   <div id="status"></div>
 
+  <script src="providers.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

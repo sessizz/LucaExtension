@@ -1,4 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const providerSelect = document.getElementById('provider');
+  const baseUrlInput = document.getElementById('baseUrl');
+  const modelInput = document.getElementById('model');
   const apiKeyInput = document.getElementById('apiKey');
   const saveBtn = document.getElementById('saveBtn');
   const statusDiv = document.getElementById('status');
@@ -86,20 +89,76 @@ document.addEventListener('DOMContentLoaded', () => {
       });
   }
 
-  chrome.storage.local.get(['openrouter_api_key', 'luca_companies'], (result) => {
-    if (result.openrouter_api_key) {
-      apiKeyInput.value = result.openrouter_api_key;
-    }
+  Object.entries(PROVIDERS).forEach(([id, preset]) => {
+    const option = document.createElement('option');
+    option.value = id;
+    option.textContent = preset.label;
+    providerSelect.appendChild(option);
+  });
+
+  function applyProviderUi(providerId) {
+    // Hazir saglayicilarin adresi sabittir; sadece ozel saglayicida duzenlenir.
+    baseUrlInput.readOnly = providerId !== 'custom';
+    apiKeyInput.placeholder = PROVIDERS[providerId].requiresKey ? 'sk-...' : 'Gerekmiyorsa bos birakin';
+  }
+
+  providerSelect.addEventListener('change', () => {
+    const preset = PROVIDERS[providerSelect.value];
+    baseUrlInput.value = preset.baseUrl;
+    modelInput.value = preset.model;
+    applyProviderUi(providerSelect.value);
+  });
+
+  chrome.storage.local.get([...SETTINGS_KEYS, 'luca_companies'], (result) => {
+    const settings = resolveSettings(result);
+    providerSelect.value = settings.providerId;
+    baseUrlInput.value = settings.baseUrl;
+    modelInput.value = settings.model;
+    apiKeyInput.value = settings.apiKey;
+    applyProviderUi(settings.providerId);
 
     companies = Array.isArray(result.luca_companies) ? result.luca_companies : [];
     renderCompanies();
   });
 
   saveBtn.addEventListener('click', () => {
-    const key = apiKeyInput.value.trim();
-    chrome.storage.local.set({ openrouter_api_key: key }, () => {
-      showStatus('API anahtari kaydedildi.');
+    const settings = resolveSettings({
+      ai_provider: providerSelect.value,
+      ai_base_url: baseUrlInput.value,
+      ai_model: modelInput.value,
+      ai_api_key: apiKeyInput.value
     });
+
+    const settingsError = validateSettings(settings);
+    if (settingsError) {
+      showStatus(settingsError, true);
+      return;
+    }
+
+    // Izin istegi kullanici tiklamasi icinde, baska bir await'ten once yapilmali.
+    // Manifest'te zaten izinli olan adresler icin pencere acilmadan true doner.
+    const url = new URL(settings.baseUrl);
+    const permissionRequest = chrome.permissions.request({ origins: [`${url.protocol}//${url.hostname}/*`] });
+
+    chrome.storage.local.set({
+      ai_provider: settings.providerId,
+      ai_base_url: settings.baseUrl,
+      ai_model: settings.model,
+      ai_api_key: settings.apiKey
+    }, () => {
+      chrome.storage.local.remove('openrouter_api_key');
+      baseUrlInput.value = settings.baseUrl;
+    });
+
+    permissionRequest
+      .then((granted) => {
+        if (granted) {
+          showStatus('Ayarlar kaydedildi.');
+        } else {
+          showStatus(`Ayarlar kaydedildi ama ${url.hostname} icin izin verilmedi.`, true);
+        }
+      })
+      .catch((error) => showStatus('Izin hatasi: ' + error.message, true));
   });
 
   saveCompanyBtn.addEventListener('click', () => {

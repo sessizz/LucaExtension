@@ -7,7 +7,11 @@ Chrome uzantisi; `https://agiris.luca.com.tr/` adresindeki Luca giris ekraninda 
 - Luca giris sayfasinda firma secim paneli gosterir.
 - Uye numarasi, kullanici adi ve parola alanlarini kayitli firma bilgileriyle doldurur.
 - Doldurma sonrasinda giris butonuna tiklar.
-- Captcha cozumu icin kullanicinin kendi OpenRouter API anahtarini kullanir.
+- Captcha cozumu icin OpenAI uyumlu (`/chat/completions`) bir gorsel model kullanir:
+  - **OpenRouter** (varsayilan, `google/gemini-2.5-flash-lite`)
+  - **OpenAI** (`gpt-4.1-mini`)
+  - **Ozel**: OpenAI uyumlu herhangi bir API adresi (Ollama, LM Studio, Groq vb.). Kaydederken o adres icin tarayici izni istenir; API anahtari istege baglidir.
+- Saglayici, model ve API anahtari uzanti penceresinden ayarlanir.
 - Ayarlari ve firma bilgilerini Chrome `storage.local` alaninda saklar.
 
 ## Kurulum

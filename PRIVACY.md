@@ -4,7 +4,7 @@ Luca Captcha ve Firma Doldurucu uzantisi, yalnizca `https://agiris.luca.com.tr/`
 
 ## Saklanan Veriler
 
-Uzanti, kullanicinin kendi girdigi firma adi, uye numarasi, kullanici adi, parola ve OpenRouter API anahtarini tarayicida yerel olarak saklar.
+Uzanti, kullanicinin kendi girdigi firma adi, uye numarasi, kullanici adi, parola ile yapay zeka saglayici ayarlarini (saglayici, API adresi, model ve API anahtari) tarayicida yerel olarak saklar.
 
 ## Verilerin Kullanimi
 
@@ -16,7 +16,7 @@ Firma bilgileri, kullanici adi ve parola gelistiriciye ait herhangi bir sunucuya
 
 ## Captcha Cozumu
 
-Captcha cozumu ozelligi kullanildiginda, captcha gorseli kullanicinin kendi OpenRouter API anahtari ile OpenRouter API'ye gonderilebilir. OpenRouter tarafindan islenen veriler OpenRouter'in kendi sartlari ve gizlilik politikasina tabi olabilir.
+Captcha cozumu ozelligi kullanildiginda, captcha gorseli kullanicinin sectigi yapay zeka saglayicisina (OpenRouter, OpenAI veya kullanicinin girdigi OpenAI uyumlu bir API adresi) kullanicinin kendi API anahtari ile gonderilebilir. Saglayici tarafindan islenen veriler o saglayicinin kendi sartlari ve gizlilik politikasina tabi olabilir.
 
 ## Toplanmayan Veriler
 
