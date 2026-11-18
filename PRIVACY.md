@@ -1,10 +1,10 @@
 # Gizlilik Politikasi
 
-Luca Captcha ve Firma Doldurucu uzantisi, yalnizca `https://agiris.luca.com.tr/` adresindeki Luca giris ekraninda kullaniciya yardimci olmak icin calisir.
+Luca Captcha, 2FA ve Firma Doldurucu uzantisi, yalnizca `https://agiris.luca.com.tr/` adresindeki Luca giris ekraninda kullaniciya yardimci olmak icin calisir.
 
 ## Saklanan Veriler
 
-Uzanti, kullanicinin kendi girdigi firma adi, uye numarasi, kullanici adi, parola ile yapay zeka saglayici ayarlarini (saglayici, API adresi, model ve API anahtari) tarayicida yerel olarak saklar.
+Uzanti, kullanicinin kendi girdigi firma adi, uye numarasi, kullanici adi, parola, iki asamali dogrulama (2FA) anahtari ile yapay zeka saglayici ayarlarini (saglayici, API adresi, model ve API anahtari) tarayicida yerel olarak saklar.
 
 ## Verilerin Kullanimi
 
@@ -12,7 +12,11 @@ Kaydedilen firma bilgileri, kullanicinin secimiyle Luca giris ekranindaki ilgili
 
 ## Veri Paylasimi
 
-Firma bilgileri, kullanici adi ve parola gelistiriciye ait herhangi bir sunucuya gonderilmez, satilmaz, paylasilmaz ve reklam ya da profil olusturma amaciyla kullanilmaz.
+Firma bilgileri, kullanici adi, parola ve 2FA anahtarlari gelistiriciye ait herhangi bir sunucuya gonderilmez, satilmaz, paylasilmaz ve reklam ya da profil olusturma amaciyla kullanilmaz.
+
+## Iki Asamali Dogrulama (2FA)
+
+2FA kodlari uzanti icinde yerel olarak uretilir. QR goruntuleri ve 2FA anahtarlari hicbir sunucuya gonderilmez; anahtarlar yalnizca kod uretmek icin kullanilir.
 
 ## Captcha Cozumu
 

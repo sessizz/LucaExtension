@@ -1,7 +1,6 @@
 let hasRun = false;
 let searchInterval;
 let loadingInterval;
-let lucaPanelReady = false;
 
 function getBase64FromImage(imgEl) {
     const canvas = document.createElement("canvas");
@@ -75,6 +74,51 @@ function checkForElements() {
     }
 }
 
+// --- Firma paneli: giris ekraninda bilgileri, 2FA ekraninda kodu doldurur ---
+
+// Giris ekraninda secilen firma, sonraki 2FA ekraninda kodu otomatik yazmak icin hatirlanir.
+// Tek kullanimlik: kod yanlis cikarsa ayni anahtarla tekrar tekrar gonderilmez.
+const SELECTED_COMPANY_KEY = "lucaSelectedCompany";
+const SELECTED_COMPANY_TTL_MS = 10 * 60 * 1000;
+
+let lucaCompanies = [];
+let lucaPanelMode = null; // "login" | "otp"
+let otpAutoTried = false;
+let otpBusy = false;
+
+const lucaCompaniesLoaded = new Promise((resolve) => {
+    chrome.storage.local.get(["luca_companies"], (result) => {
+        lucaCompanies = Array.isArray(result.luca_companies) ? result.luca_companies : [];
+        resolve();
+    });
+});
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== "local" || !changes.luca_companies) return;
+    lucaCompanies = Array.isArray(changes.luca_companies.newValue) ? changes.luca_companies.newValue : [];
+    renderLucaCompanies();
+});
+
+function rememberSelectedCompany(companyId) {
+    try {
+        sessionStorage.setItem(SELECTED_COMPANY_KEY, JSON.stringify({ id: companyId, at: Date.now() }));
+    } catch (e) {
+        // sessionStorage kapaliysa 2FA ekraninda firma elle secilir
+    }
+}
+
+function takeSelectedCompanyId() {
+    try {
+        const raw = sessionStorage.getItem(SELECTED_COMPANY_KEY);
+        sessionStorage.removeItem(SELECTED_COMPANY_KEY);
+        if (!raw) return null;
+        const selected = JSON.parse(raw);
+        return Date.now() - selected.at < SELECTED_COMPANY_TTL_MS ? selected.id : null;
+    } catch (e) {
+        return null;
+    }
+}
+
 function setNativeInputValue(input, value) {
     const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
     setter.call(input, value);
@@ -88,35 +132,55 @@ function showLucaStatus(message, isError) {
 
     status.textContent = message;
     status.style.color = isError ? "#d93025" : "#137333";
-    setTimeout(() => {
+    clearTimeout(showLucaStatus.timer);
+    showLucaStatus.timer = setTimeout(() => {
         status.textContent = "";
-    }, 2500);
+    }, isError ? 6000 : 2500);
 }
 
-function fillLucaLogin(company) {
+function findLoginInputs() {
     const memberNoInput = document.getElementById("musteriNo") || document.querySelector('input[name="musteriNo"]');
     const usernameInput = document.getElementById("kullaniciAdi") || document.querySelector('input[name="kullaniciAdi"]');
     const passwordInput = document.getElementById("parola") || document.querySelector('input[name="parola"]');
 
-    if (!memberNoInput || !usernameInput || !passwordInput) {
+    if (!memberNoInput || !usernameInput || !passwordInput) return null;
+    return { memberNoInput, usernameInput, passwordInput };
+}
+
+// Luca 2FA ekrani: <input type="text" id="code" name="code">
+function findOtpInput() {
+    const input = document.getElementById("code");
+    if (!input || input.tagName !== "INPUT" || input.name !== "code") return null;
+    return input;
+}
+
+function findButtonByText(root, ...labels) {
+    const wanted = labels.map((label) => label.toLocaleUpperCase("tr-TR"));
+    return Array.from(root.querySelectorAll('input[type="button"], input[type="submit"], button'))
+        .find((button) => {
+            const text = (button.value || button.textContent || "").trim().toLocaleUpperCase("tr-TR");
+            return wanted.includes(text);
+        });
+}
+
+function fillLucaLogin(company) {
+    const inputs = findLoginInputs();
+    if (!inputs) {
         showLucaStatus("Luca alanlari bulunamadi.", true);
         return;
     }
 
-    setNativeInputValue(memberNoInput, company.memberNo || "");
-    setNativeInputValue(usernameInput, company.username || "");
-    setNativeInputValue(passwordInput, company.password || "");
+    setNativeInputValue(inputs.memberNoInput, company.memberNo || "");
+    setNativeInputValue(inputs.usernameInput, company.username || "");
+    setNativeInputValue(inputs.passwordInput, company.password || "");
+    rememberSelectedCompany(company.id);
     showLucaStatus(`${company.name} dolduruldu, giris yapiliyor.`, false);
 
     setTimeout(clickLucaLoginButton, 150);
 }
 
 function clickLucaLoginButton() {
-    const loginButton = Array.from(document.querySelectorAll('input[type="button"], button'))
-        .find((button) => {
-            const text = (button.value || button.textContent || "").trim().toLocaleUpperCase("tr-TR");
-            return text === "GIRIS" || text === "GİRİŞ";
-        });
+    const loginButton = findButtonByText(document, "GIRIS", "GİRİŞ");
 
     if (!loginButton) {
         showLucaStatus("Giris butonu bulunamadi.", true);
@@ -126,12 +190,89 @@ function clickLucaLoginButton() {
     loginButton.click();
 }
 
-function renderLucaCompanies(companies, onCompanyClick) {
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fillOtpCode(company) {
+    if (otpBusy) return;
+    if (!company.otp) {
+        showLucaStatus(`${company.name} icin 2FA QR kaydi yok. Kodu elle girin.`, true);
+        return;
+    }
+
+    const input = findOtpInput();
+    if (!input) {
+        showLucaStatus("2FA kod alani bulunamadi.", true);
+        return;
+    }
+
+    otpBusy = true;
+    try {
+        const wait = otpWaitMs(company.otp, Date.now());
+        if (wait) {
+            showLucaStatus("Kodun suresi doluyor, yeni kod bekleniyor...", false);
+            await sleep(wait);
+        }
+
+        const code = await generateTotp(company.otp, Date.now());
+        setNativeInputValue(input, code);
+        showLucaStatus(`${company.name} 2FA kodu yazildi, gonderiliyor.`, false);
+        setTimeout(() => clickOtpSubmitButton(input), 150);
+    } catch (err) {
+        showLucaStatus("2FA kodu uretilemedi: " + (err && err.message ? err.message : err), true);
+    } finally {
+        otpBusy = false;
+    }
+}
+
+// Luca 2FA ekrani: <input onclick="document.forms[0].submit()" type="button" value="Tamam">
+function clickOtpSubmitButton(input) {
+    const button = (input.form && findButtonByText(input.form, "TAMAM")) || findButtonByText(document, "TAMAM");
+
+    if (!button) {
+        showLucaStatus("Tamam butonu bulunamadi; kod yazildi, elle gonderin.", true);
+        return;
+    }
+
+    button.click();
+}
+
+async function autoFillOtp() {
+    if (otpAutoTried) return;
+    otpAutoTried = true;
+
+    const companyId = takeSelectedCompanyId();
+    await lucaCompaniesLoaded;
+
+    if (!companyId) {
+        showLucaStatus("2FA kodu icin firma secin.", false);
+        return;
+    }
+
+    const company = lucaCompanies.find((item) => item.id === companyId);
+    if (!company) {
+        showLucaStatus("Secilen firma bulunamadi; listeden secin.", true);
+        return;
+    }
+
+    await fillOtpCode(company);
+}
+
+function onLucaCompanyClick(company) {
+    if (lucaPanelMode === "otp") {
+        fillOtpCode(company);
+    } else {
+        fillLucaLogin(company);
+    }
+}
+
+function renderLucaCompanies() {
     const list = document.getElementById("luca-company-list");
     if (!list) return;
 
     list.innerHTML = "";
-    if (!companies.length) {
+    if (!lucaCompanies.length) {
         const empty = document.createElement("div");
         empty.textContent = "Kayitli firma yok";
         empty.style.cssText = "all:initial;display:block;padding:10px 8px;color:#566773;font:13px Arial,sans-serif;text-align:center;";
@@ -139,13 +280,16 @@ function renderLucaCompanies(companies, onCompanyClick) {
         return;
     }
 
-    companies
+    const otpMode = lucaPanelMode === "otp";
+
+    lucaCompanies
         .slice()
         .sort((a, b) => a.name.localeCompare(b.name, "tr"))
         .forEach((company) => {
+            const disabled = otpMode && !company.otp;
             const companyButton = document.createElement("button");
             companyButton.type = "button";
-            companyButton.textContent = company.name;
+            companyButton.textContent = disabled ? `${company.name} (2FA yok)` : company.name;
             companyButton.style.cssText = [
                 "all:initial",
                 "box-sizing:border-box",
@@ -159,7 +303,7 @@ function renderLucaCompanies(companies, onCompanyClick) {
                 "border:1px solid #d0d7de",
                 "border-radius:6px",
                 "background:#f8fafc",
-                "color:#17202a",
+                `color:${disabled ? "#90a4ae" : "#17202a"}`,
                 "font:700 13px Arial,sans-serif",
                 "line-height:1.2",
                 "text-align:left",
@@ -175,91 +319,84 @@ function renderLucaCompanies(companies, onCompanyClick) {
                 companyButton.style.background = "#f8fafc";
                 companyButton.style.borderColor = "#d0d7de";
             });
-            companyButton.addEventListener("click", () => onCompanyClick(company));
+            companyButton.addEventListener("click", () => onLucaCompanyClick(company));
 
             list.appendChild(companyButton);
         });
 }
 
-function initLucaAutofillPanel() {
-    if (lucaPanelReady || document.getElementById("luca-autofill-panel")) return;
+function ensureLucaPanel(mode) {
+    let panel = document.getElementById("luca-autofill-panel");
 
-    const memberNoInput = document.getElementById("musteriNo") || document.querySelector('input[name="musteriNo"]');
-    const usernameInput = document.getElementById("kullaniciAdi") || document.querySelector('input[name="kullaniciAdi"]');
-    const passwordInput = document.getElementById("parola") || document.querySelector('input[name="parola"]');
+    if (!panel) {
+        panel = document.createElement("div");
+        panel.id = "luca-autofill-panel";
+        panel.style.cssText = [
+            "all:initial",
+            "position:fixed",
+            "top:14px",
+            "right:14px",
+            "z-index:2147483647",
+            "display:block",
+            "box-sizing:border-box",
+            "width:286px",
+            "padding:14px",
+            "border:1px solid #d0d7de",
+            "border-radius:8px",
+            "background:#fff",
+            "box-shadow:0 8px 28px rgba(0,0,0,.24)",
+            "font:13px Arial,sans-serif",
+            "color:#17202a"
+        ].join(";");
 
-    if (!memberNoInput || !usernameInput || !passwordInput) return;
+        const title = document.createElement("div");
+        title.id = "luca-autofill-title";
+        title.style.cssText = "all:initial;display:block;font:700 13px Arial,sans-serif;color:#17202a;margin-bottom:10px;";
 
-    lucaPanelReady = true;
+        const list = document.createElement("div");
+        list.id = "luca-company-list";
+        list.style.cssText = "all:initial;box-sizing:border-box;display:block;max-height:260px;overflow:auto;";
 
-    const panel = document.createElement("div");
-    panel.id = "luca-autofill-panel";
-    panel.style.cssText = [
-        "all:initial",
-        "position:fixed",
-        "top:14px",
-        "right:14px",
-        "z-index:2147483647",
-        "display:block",
-        "box-sizing:border-box",
-        "width:286px",
-        "padding:14px",
-        "border:1px solid #d0d7de",
-        "border-radius:8px",
-        "background:#fff",
-        "box-shadow:0 8px 28px rgba(0,0,0,.24)",
-        "font:13px Arial,sans-serif",
-        "color:#17202a"
-    ].join(";");
+        const status = document.createElement("div");
+        status.id = "luca-autofill-status";
+        status.style.cssText = "all:initial;display:block;min-height:16px;margin-top:9px;font:12px Arial,sans-serif;";
 
-    const title = document.createElement("div");
-    title.textContent = "Firma sec";
-    title.style.cssText = "all:initial;display:block;font:700 13px Arial,sans-serif;color:#17202a;margin-bottom:10px;";
+        panel.appendChild(title);
+        panel.appendChild(list);
+        panel.appendChild(status);
+        document.documentElement.appendChild(panel);
+    }
 
-    const list = document.createElement("div");
-    list.id = "luca-company-list";
-    list.style.cssText = "all:initial;box-sizing:border-box;display:block;max-height:260px;overflow:auto;";
-
-    const status = document.createElement("div");
-    status.id = "luca-autofill-status";
-    status.style.cssText = "all:initial;display:block;min-height:16px;margin-top:9px;font:12px Arial,sans-serif;";
-
-    panel.appendChild(title);
-    panel.appendChild(list);
-    panel.appendChild(status);
-    document.documentElement.appendChild(panel);
-
-    let companies = [];
-
-    chrome.storage.local.get(["luca_companies"], (result) => {
-        companies = Array.isArray(result.luca_companies) ? result.luca_companies : [];
-        renderLucaCompanies(companies, (company) => {
-            fillLucaLogin(company);
-        });
-    });
-
-    chrome.storage.onChanged.addListener((changes, areaName) => {
-        if (areaName !== "local" || !changes.luca_companies) return;
-        companies = Array.isArray(changes.luca_companies.newValue) ? changes.luca_companies.newValue : [];
-        renderLucaCompanies(companies, (company) => {
-            fillLucaLogin(company);
-        });
-    });
+    if (lucaPanelMode !== mode) {
+        lucaPanelMode = mode;
+        document.getElementById("luca-autofill-title").textContent =
+            mode === "otp" ? "2FA kodu icin firma sec" : "Firma sec";
+        lucaCompaniesLoaded.then(renderLucaCompanies);
+    }
 }
 
-function checkForLucaLogin() {
-    initLucaAutofillPanel();
+function checkForLucaPage() {
+    // 2FA ekrani once kontrol edilir; giris alanlari ayni sayfada gizli kalsa bile kod yazilir.
+    if (findOtpInput()) {
+        ensureLucaPanel("otp");
+        autoFillOtp();
+        return;
+    }
+
+    if (findLoginInputs()) {
+        ensureLucaPanel("login");
+    }
 }
 
 searchInterval = setInterval(checkForElements, 500);
-setInterval(checkForLucaLogin, 500);
+setInterval(checkForLucaPage, 500);
 
 if (document.readyState === "complete" || document.readyState === "interactive") {
     checkForElements();
-    checkForLucaLogin();
+    checkForLucaPage();
 } else {
     document.addEventListener("DOMContentLoaded", () => {
         checkForElements();
-        checkForLucaLogin();
+        checkForLucaPage();
     });
 }

@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8">
-  <title>Gizlilik Politikasi - Luca Captcha ve Firma Doldurucu</title>
+  <title>Gizlilik Politikasi - Luca Captcha, 2FA ve Firma Doldurucu</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
@@ -20,7 +20,7 @@
   <h1>Gizlilik Politikasi</h1>
 
   <p>
-    Luca Captcha ve Firma Doldurucu uzantisi, yalnizca
+    Luca Captcha, 2FA ve Firma Doldurucu uzantisi, yalnizca
     https://agiris.luca.com.tr/ adresindeki Luca giris ekraninda kullaniciya
     yardimci olmak icin calisir.
   </p>
@@ -28,7 +28,7 @@
   <h2>Saklanan Veriler</h2>
   <p>
     Uzanti, kullanicinin kendi girdigi firma adi, uye numarasi, kullanici adi,
-    parola ile yapay zeka saglayici ayarlarini (saglayici, API adresi, model ve
+    parola, iki asamali dogrulama (2FA) anahtari ile yapay zeka saglayici ayarlarini (saglayici, API adresi, model ve
     API anahtari) tarayicida yerel olarak saklar.
   </p>
 
@@ -40,9 +40,16 @@
 
   <h2>Veri Paylasimi</h2>
   <p>
-    Firma bilgileri, kullanici adi ve parola gelistiriciye ait herhangi bir
+    Firma bilgileri, kullanici adi, parola ve 2FA anahtarlari gelistiriciye ait herhangi bir
     sunucuya gonderilmez, satilmaz, paylasilmaz ve reklam ya da profil olusturma
     amaciyla kullanilmaz.
+  </p>
+
+  <h2>Iki Asamali Dogrulama (2FA)</h2>
+  <p>
+    2FA kodlari uzanti icinde yerel olarak uretilir. QR goruntuleri ve 2FA
+    anahtarlari hicbir sunucuya gonderilmez; anahtarlar yalnizca kod uretmek
+    icin kullanilir.
   </p>
 
   <h2>Captcha Cozumu</h2>

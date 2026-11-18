@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <style>
     * { box-sizing: border-box; }
-    body { width: 360px; padding: 14px; font-family: Arial, sans-serif; color: #17202a; }
+    body { width: 360px; margin: 0 auto; padding: 14px; font-family: Arial, sans-serif; color: #17202a; }
     h3 { margin: 0 0 10px; font-size: 16px; }
     h4 { margin: 18px 0 8px; font-size: 14px; }
     label { display: block; margin: 8px 0 4px; font-size: 12px; font-weight: 700; color: #34495e; }
@@ -14,14 +14,30 @@
     button.danger { background: #d93025; }
     .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .full { width: 100%; }
+    .header { display: flex; justify-content: space-between; align-items: baseline; }
+    .header a { font-size: 11px; color: #1f6feb; }
     #status { min-height: 16px; margin-top: 10px; color: #137333; font-size: 12px; }
     #companyList { margin-top: 8px; font-size: 12px; color: #455a64; }
     .company-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid #eceff1; }
     .company-item button { width: auto; padding: 5px 8px; font-size: 11px; }
+    .company-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .company-actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .otp-code { font: 700 15px Consolas, "Courier New", monospace; color: #1f6feb; letter-spacing: 2px; cursor: pointer; }
+    .otp-code.none { font: 11px Arial, sans-serif; color: #90a4ae; letter-spacing: 0; cursor: default; }
+    .otp-secs { font: 11px Arial, sans-serif; color: #78909c; letter-spacing: 0; margin-left: 4px; }
+    .otp-box { margin-bottom: 8px; padding: 8px; border: 1px solid #cfd8dc; border-radius: 4px; background: #f8fafc; }
+    .otp-info { font-size: 12px; color: #455a64; margin-bottom: 8px; word-break: break-word; }
+    .otp-drop { padding: 12px 8px; margin-bottom: 8px; border: 2px dashed #b0bec5; border-radius: 4px; text-align: center; font-size: 12px; color: #546e7a; background: white; outline: none; }
+    .otp-drop:focus, .otp-drop.dragover { border-color: #1f6feb; color: #1f6feb; }
+    #otpChoices button { display: block; width: 100%; margin-top: 6px; text-align: left; background: #eaf2ff; color: #17202a; border: 1px solid #1f6feb; font-weight: 400; }
+    .hint { font-size: 11px; color: #78909c; margin: 6px 0 0; }
   </style>
 </head>
 <body>
-  <h3>Yapay Zeka Ayarlari</h3>
+  <div class="header">
+    <h3>Yapay Zeka Ayarlari</h3>
+    <a href="#" id="openTab">Yeni sekmede ac</a>
+  </div>
   <label for="provider">Saglayici</label>
   <select id="provider"></select>
 
@@ -48,6 +64,18 @@
   <label for="password">Parola</label>
   <input type="password" id="password" maxlength="25" placeholder="parola">
 
+  <label>2FA (Google Authenticator)</label>
+  <div class="otp-box">
+    <div id="otpInfo" class="otp-info">QR kayitli degil.</div>
+    <div id="otpDrop" class="otp-drop" tabindex="0">QR ekran goruntusunu yapistir (Ctrl+V) veya buraya surukle</div>
+    <div class="row">
+      <button id="otpFileBtn" type="button" class="secondary">Dosyadan Sec</button>
+      <button id="otpRemoveBtn" type="button" class="danger">QR Sil</button>
+    </div>
+    <div id="otpChoices"></div>
+    <input type="file" id="otpFile" accept="image/*" hidden>
+  </div>
+
   <div class="row">
     <button id="saveCompanyBtn">Firmayi Kaydet</button>
     <button id="clearCompanyBtn" class="secondary">Formu Temizle</button>
@@ -56,6 +84,16 @@
   <div id="companyList"></div>
   <div id="status"></div>
 
+  <h4>Yedek</h4>
+  <div class="row">
+    <button id="exportBtn" type="button" class="secondary">Disa Aktar (JSON)</button>
+    <button id="importBtn" type="button" class="secondary">Ice Aktar (JSON)</button>
+  </div>
+  <input type="file" id="importFile" accept="application/json,.json" hidden>
+  <p class="hint">Yedek dosyasi parolalari ve 2FA anahtarlarini sifresiz icerir; guvenli yerde saklayin.</p>
+
+  <script src="vendor/jsQR.js"></script>
+  <script src="totp.js"></script>
   <script src="providers.js"></script>
   <script src="popup.js"></script>
 </body>

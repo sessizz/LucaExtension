@@ -12,15 +12,227 @@ document.addEventListener('DOMContentLoaded', () => {
   const saveCompanyBtn = document.getElementById('saveCompanyBtn');
   const clearCompanyBtn = document.getElementById('clearCompanyBtn');
   const companyList = document.getElementById('companyList');
+  const otpInfo = document.getElementById('otpInfo');
+  const otpDrop = document.getElementById('otpDrop');
+  const otpFileBtn = document.getElementById('otpFileBtn');
+  const otpFile = document.getElementById('otpFile');
+  const otpRemoveBtn = document.getElementById('otpRemoveBtn');
+  const otpChoices = document.getElementById('otpChoices');
+  const exportBtn = document.getElementById('exportBtn');
+  const importBtn = document.getElementById('importBtn');
+  const importFile = document.getElementById('importFile');
+  const openTabLink = document.getElementById('openTab');
 
   let companies = [];
   let editingCompanyId = null;
+  // Formdaki firmanin 2FA bilgisi (kaydedilene kadar burada durur).
+  let pendingOtp = null;
+  let pendingOtpChanged = false;
 
   function showStatus(message, isError = false) {
     statusDiv.textContent = message;
     statusDiv.style.color = isError ? '#d93025' : '#137333';
     setTimeout(() => { statusDiv.textContent = ''; }, 2500);
   }
+
+  // --- 2FA (QR) ---
+
+  function setPendingOtp(otp, changed) {
+    pendingOtp = otp;
+    pendingOtpChanged = changed;
+    otpChoices.innerHTML = '';
+    renderOtpInfo();
+    refreshCodes();
+  }
+
+  function renderOtpInfo() {
+    otpRemoveBtn.disabled = !pendingOtp;
+    otpRemoveBtn.style.opacity = pendingOtp ? '1' : '.5';
+
+    if (!pendingOtp) {
+      otpInfo.textContent = pendingOtpChanged
+        ? 'QR silinecek. Kaydetmek icin firmayi kaydedin.'
+        : 'QR kayitli degil.';
+      return;
+    }
+
+    otpInfo.textContent = '';
+    const title = document.createElement('div');
+    title.textContent = (pendingOtpChanged ? 'Yeni QR okundu: ' : 'Kayitli QR: ') + otpLabel(pendingOtp);
+    const code = document.createElement('div');
+    code.id = 'otpFormCode';
+    code.className = 'otp-code';
+    code.title = 'Kopyalamak icin tiklayin';
+    code.addEventListener('click', () => copyCode(code.dataset.code));
+    otpInfo.appendChild(title);
+    otpInfo.appendChild(code);
+
+    if (pendingOtpChanged) {
+      const hint = document.createElement('div');
+      hint.className = 'hint';
+      hint.textContent = 'Kod telefondakiyle ayniysa firmayi kaydedin.';
+      otpInfo.appendChild(hint);
+    }
+  }
+
+  function applyOtpEntries(entries) {
+    if (entries.length === 1) {
+      setPendingOtp(entries[0], true);
+      showStatus('QR okundu. Firmayi kaydetmeyi unutmayin.');
+      return;
+    }
+
+    // Google Authenticator aktarma QR'inda birden cok hesap olabilir: kullanici secer.
+    otpChoices.innerHTML = '';
+    const note = document.createElement('div');
+    note.className = 'hint';
+    note.textContent = `Bu QR'da ${entries.length} hesap var. Bu firmaya ait olani secin:`;
+    otpChoices.appendChild(note);
+    entries.forEach((entry) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = otpLabel(entry);
+      button.addEventListener('click', () => {
+        setPendingOtp(entry, true);
+        showStatus('Hesap secildi. Firmayi kaydetmeyi unutmayin.');
+      });
+      otpChoices.appendChild(button);
+    });
+  }
+
+  // Seffaf PNG'ler beyaz zemine cizilir; buyuk/kucuk goruntuler icin olcekli tekrar denenir.
+  async function decodeQrFromBlob(blob) {
+    const bitmap = await createImageBitmap(blob);
+    const maxSide = Math.max(bitmap.width, bitmap.height);
+    const scales = [1];
+    if (maxSide > 1400) scales.push(1400 / maxSide, 800 / maxSide);
+    if (maxSide < 500) scales.push(2);
+
+    for (const scale of scales) {
+      const width = Math.max(1, Math.round(bitmap.width * scale));
+      const height = Math.max(1, Math.round(bitmap.height * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.imageSmoothingEnabled = scale < 1;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(bitmap, 0, 0, width, height);
+      const image = ctx.getImageData(0, 0, width, height);
+      const result = jsQR(image.data, width, height, { inversionAttempts: 'attemptBoth' });
+      if (result && result.data) return result.data;
+    }
+    return null;
+  }
+
+  async function handleQrImage(blob) {
+    try {
+      const text = await decodeQrFromBlob(blob);
+      if (!text) {
+        showStatus('Goruntude QR kod bulunamadi.', true);
+        return;
+      }
+      applyOtpEntries(parseQrText(text));
+    } catch (error) {
+      showStatus(error.message || 'QR okunamadi.', true);
+    }
+  }
+
+  // QR yerine anahtar metni (otpauth://... veya JBSW... gibi) de yapistirilabilir.
+  function handleOtpText(text) {
+    const value = text.trim();
+    try {
+      if (/^otpauth/i.test(value)) {
+        applyOtpEntries(parseQrText(value));
+      } else {
+        applyOtpEntries([makeOtp({ secret: value, issuer: '', account: companyNameInput.value.trim() })]);
+      }
+    } catch (error) {
+      showStatus(error.message, true);
+    }
+  }
+
+  document.addEventListener('paste', (event) => {
+    const items = Array.from(event.clipboardData?.items || []);
+    const imageItem = items.find((item) => item.kind === 'file' && item.type.startsWith('image/'));
+    if (imageItem) {
+      event.preventDefault();
+      handleQrImage(imageItem.getAsFile());
+      return;
+    }
+    // Metin yapistirma normal alanlarda bozulmasin; sadece QR kutusundayken anahtar olarak yorumla.
+    if (document.activeElement === otpDrop) {
+      const text = event.clipboardData?.getData('text') || '';
+      if (text.trim()) {
+        event.preventDefault();
+        handleOtpText(text);
+      }
+    }
+  });
+
+  otpDrop.addEventListener('dragover', (event) => {
+    event.preventDefault();
+    otpDrop.classList.add('dragover');
+  });
+  otpDrop.addEventListener('dragleave', () => otpDrop.classList.remove('dragover'));
+  otpDrop.addEventListener('drop', (event) => {
+    event.preventDefault();
+    otpDrop.classList.remove('dragover');
+    const file = Array.from(event.dataTransfer?.files || []).find((f) => f.type.startsWith('image/'));
+    if (file) handleQrImage(file);
+    else showStatus('Bir resim dosyasi birakin.', true);
+  });
+
+  otpFileBtn.addEventListener('click', () => otpFile.click());
+  otpFile.addEventListener('change', () => {
+    const file = otpFile.files && otpFile.files[0];
+    otpFile.value = '';
+    if (file) handleQrImage(file);
+  });
+
+  otpRemoveBtn.addEventListener('click', () => {
+    if (!pendingOtp) return;
+    setPendingOtp(null, true);
+  });
+
+  // --- Canli kodlar ---
+
+  function copyCode(code) {
+    if (!code) return;
+    navigator.clipboard.writeText(code)
+      .then(() => showStatus('Kod kopyalandi.'))
+      .catch(() => showStatus('Kopyalanamadi.', true));
+  }
+
+  function setCodeElement(element, otp, now) {
+    generateTotp(otp, now)
+      .then((code) => {
+        element.dataset.code = code;
+        element.textContent = code;
+        const secs = document.createElement('span');
+        secs.className = 'otp-secs';
+        secs.textContent = `${otpRemainingSeconds(otp, now)} sn`;
+        element.appendChild(secs);
+      })
+      .catch(() => {
+        element.textContent = 'Kod uretilemedi';
+      });
+  }
+
+  function refreshCodes() {
+    const now = Date.now();
+    companyList.querySelectorAll('.otp-code[data-company-id]').forEach((element) => {
+      const company = companies.find((item) => item.id === element.dataset.companyId);
+      if (company && company.otp) setCodeElement(element, company.otp, now);
+    });
+    const formCode = document.getElementById('otpFormCode');
+    if (formCode && pendingOtp) setCodeElement(formCode, pendingOtp, now);
+  }
+
+  setInterval(refreshCodes, 1000);
+
+  // --- Firmalar ---
 
   function clearCompanyForm() {
     editingCompanyId = null;
@@ -29,6 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
     usernameInput.value = '';
     passwordInput.value = '';
     saveCompanyBtn.textContent = 'Firmayi Kaydet';
+    setPendingOtp(null, false);
   }
 
   function persistCompanies(message) {
@@ -54,10 +267,28 @@ document.addEventListener('DOMContentLoaded', () => {
         const item = document.createElement('div');
         item.className = 'company-item';
 
+        const main = document.createElement('div');
+        main.className = 'company-main';
+
         const name = document.createElement('span');
         name.textContent = company.name;
 
+        const code = document.createElement('span');
+        if (company.otp) {
+          code.className = 'otp-code';
+          code.dataset.companyId = company.id;
+          code.title = 'Kopyalamak icin tiklayin';
+          code.addEventListener('click', () => copyCode(code.dataset.code));
+        } else {
+          code.className = 'otp-code none';
+          code.textContent = '2FA yok';
+        }
+
+        main.appendChild(name);
+        main.appendChild(code);
+
         const actions = document.createElement('div');
+        actions.className = 'company-actions';
 
         const editBtn = document.createElement('button');
         editBtn.type = 'button';
@@ -70,6 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
           usernameInput.value = company.username || '';
           passwordInput.value = company.password || '';
           saveCompanyBtn.textContent = 'Firmayi Guncelle';
+          setPendingOtp(company.otp || null, false);
         });
 
         const deleteBtn = document.createElement('button');
@@ -77,17 +309,91 @@ document.addEventListener('DOMContentLoaded', () => {
         deleteBtn.className = 'danger';
         deleteBtn.textContent = 'Sil';
         deleteBtn.addEventListener('click', () => {
+          if (!confirm(`${company.name} silinsin mi?`)) return;
           companies = companies.filter((item) => item.id !== company.id);
           persistCompanies('Firma silindi.');
         });
 
         actions.appendChild(editBtn);
         actions.appendChild(deleteBtn);
-        item.appendChild(name);
+        item.appendChild(main);
         item.appendChild(actions);
         companyList.appendChild(item);
       });
+
+    refreshCodes();
   }
+
+  // --- Yedek (JSON) ---
+
+  exportBtn.addEventListener('click', () => {
+    const data = {
+      app: 'luca-extension',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      companies
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `luca-firmalar-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showStatus(`${companies.length} firma disa aktarildi.`);
+  });
+
+  importBtn.addEventListener('click', () => importFile.click());
+  importFile.addEventListener('change', async () => {
+    const file = importFile.files && importFile.files[0];
+    importFile.value = '';
+    if (!file) return;
+
+    try {
+      const data = JSON.parse(await file.text());
+      const list = Array.isArray(data) ? data : data && data.companies;
+      if (!Array.isArray(list)) throw new Error('Dosyada firma listesi yok.');
+
+      // Kopya uzerinde calis: bozuk bir kayit yarim kalmis bir liste birakmasin.
+      const next = companies.slice();
+      let added = 0;
+      let updated = 0;
+      list.forEach((raw) => {
+        if (!raw || !raw.name) return;
+        const company = {
+          id: raw.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          name: String(raw.name).trim(),
+          memberNo: String(raw.memberNo || '').trim(),
+          username: String(raw.username || '').trim(),
+          password: String(raw.password || '')
+        };
+        if (raw.otp) company.otp = makeOtp(raw.otp);
+
+        const index = next.findIndex((item) => item.id === company.id);
+        if (index === -1) {
+          next.push(company);
+          added++;
+        } else {
+          next[index] = company;
+          updated++;
+        }
+      });
+
+      companies = next;
+      persistCompanies(`${added} firma eklendi, ${updated} firma guncellendi.`);
+    } catch (error) {
+      showStatus('Ice aktarilamadi: ' + error.message, true);
+    }
+  });
+
+  openTabLink.addEventListener('click', (event) => {
+    event.preventDefault();
+    chrome.tabs.create({ url: chrome.runtime.getURL('popup.html') });
+  });
+
+  // --- Yapay zeka ayarlari ---
 
   Object.entries(PROVIDERS).forEach(([id, preset]) => {
     const option = document.createElement('option');
@@ -169,6 +475,7 @@ document.addEventListener('DOMContentLoaded', () => {
       username: usernameInput.value.trim(),
       password: passwordInput.value
     };
+    if (pendingOtp) company.otp = pendingOtp;
 
     if (!company.name || !company.memberNo || !company.username || !company.password) {
       showStatus('Tum firma alanlarini doldurun.', true);
@@ -185,4 +492,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   clearCompanyBtn.addEventListener('click', clearCompanyForm);
+
+  renderOtpInfo();
 });
