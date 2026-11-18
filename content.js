@@ -84,6 +84,48 @@ function handleEmptyCaptchaResponse() {
     }, 800);
 }
 
+// Gecerli gorunen captcha cevabindan sonra Tamam'a basilir. Yapay zeka hep yanlis okursa
+// Luca'ya durmadan hatali giris gitmesin diye 5 dakikada en fazla CAPTCHA_MAX_AUTO_SUBMITS kez.
+const CAPTCHA_SUBMIT_KEY = "lucaCaptchaAutoSubmits";
+const CAPTCHA_MAX_AUTO_SUBMITS = 3;
+const CAPTCHA_SUBMIT_WINDOW_MS = 5 * 60 * 1000;
+const CAPTCHA_ANSWER_PATTERN = /^[a-z0-9]{3,10}$/i;
+
+function recentCaptchaSubmits() {
+    try {
+        const list = JSON.parse(sessionStorage.getItem(CAPTCHA_SUBMIT_KEY) || "[]");
+        const now = Date.now();
+        return Array.isArray(list) ? list.filter((time) => now - time < CAPTCHA_SUBMIT_WINDOW_MS) : [];
+    } catch (e) {
+        return null; // sayac tutulamiyorsa otomatik gonderim yapilmaz
+    }
+}
+
+function autoSubmitCaptcha(answer) {
+    // Giris alanlari ayni sayfadaysa gonderim GIRIS ile yapilir; ona kullanici ya da panel basar.
+    if (findLoginInputs()) return;
+    // Cumle, bos ya da tuhaf karakterli cevaplar gonderilmez; kullanici kontrol eder.
+    if (!CAPTCHA_ANSWER_PATTERN.test(answer)) return;
+
+    const input = document.getElementById("captcha-input");
+    const button = (input && input.form && findButtonByText(input.form, "TAMAM")) || findButtonByText(document, "TAMAM");
+    if (!button) return;
+
+    const submits = recentCaptchaSubmits();
+    if (!submits || submits.length >= CAPTCHA_MAX_AUTO_SUBMITS) {
+        console.log("Captcha otomatik gonderim siniri doldu; Tamam'a elle basin.");
+        return;
+    }
+
+    submits.push(Date.now());
+    try {
+        sessionStorage.setItem(CAPTCHA_SUBMIT_KEY, JSON.stringify(submits));
+    } catch (e) {
+        return;
+    }
+    setTimeout(() => button.click(), 300);
+}
+
 function processImage(imgEl) {
     if (hasRun) return;
     hasRun = true;
@@ -99,6 +141,7 @@ function processImage(imgEl) {
             if (response && response.success) {
                 writeCaptchaReloads(0);
                 stopLoadingAnimation(response.text);
+                autoSubmitCaptcha(response.text);
             } else if (response && response.code === "EMPTY_RESPONSE") {
                 handleEmptyCaptchaResponse();
             } else {
