@@ -1,3 +1,6 @@
+// Otomatik doldurma ile tiklama arasindaki bekleme. Cok hizli tiklayinca site yetisemiyor.
+const AUTO_CLICK_DELAY_MS = 1000;
+
 let hasRun = false;
 let searchInterval;
 let loadingInterval;
@@ -144,7 +147,7 @@ function autoSubmitCaptcha(answer) {
     } catch (e) {
         return;
     }
-    setTimeout(() => button.click(), 300);
+    setTimeout(() => button.click(), AUTO_CLICK_DELAY_MS);
 }
 
 function handleCaptchaResponse(response) {
@@ -380,7 +383,7 @@ function fillLucaLogin(company) {
     rememberSelectedCompany(company.id);
     showLucaStatus(`${company.name} dolduruldu, giris yapiliyor.`, false);
 
-    setTimeout(clickLucaLoginButton, 150);
+    setTimeout(clickLucaLoginButton, AUTO_CLICK_DELAY_MS);
 }
 
 function clickLucaLoginButton() {
@@ -423,7 +426,7 @@ async function fillOtpCode(company) {
         const code = await generateTotp(company.otp, Date.now());
         setNativeInputValue(input, code);
         showLucaStatus(`${company.name} 2FA kodu yazildi, gonderiliyor.`, false);
-        setTimeout(() => clickOtpSubmitButton(input), 150);
+        setTimeout(() => clickOtpSubmitButton(input), AUTO_CLICK_DELAY_MS);
     } catch (err) {
         showLucaStatus("2FA kodu uretilemedi: " + (err && err.message ? err.message : err), true);
     } finally {
@@ -630,7 +633,7 @@ function checkForProductChooser() {
     if (!tile) return true;
 
     // gonder(...) sayfanin kendi betiginde tanimli; sayfa tamamen yuklenince tiklanir.
-    const click = () => setTimeout(() => tile.click(), 300);
+    const click = () => setTimeout(() => tile.click(), AUTO_CLICK_DELAY_MS);
     if (document.readyState === "complete") click();
     else window.addEventListener("load", click, { once: true });
     return true;

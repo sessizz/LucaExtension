@@ -60,8 +60,10 @@ test('remaining seconds and wait before a fresh code', () => {
   assert.equal(otpRemainingSeconds(otp, 29_000), 1);
   assert.equal(otpRemainingSeconds(otp, 29_999), 1);
   assert.equal(otpRemainingSeconds(otp, 30_000), 30);
-  // more than 3 s left: no wait
-  assert.equal(otpWaitMs(otp, 26_000), 0);
+  // more than 5 s left: no wait
+  assert.equal(otpWaitMs(otp, 24_000), 0);
+  // 4 s left: wait for the next code
+  assert.equal(otpWaitMs(otp, 26_000), 4_000 + 250);
   // 2.5 s left: wait until the next period (+ small margin)
   assert.equal(otpWaitMs(otp, 27_500), 2_500 + 250);
 });

@@ -87,3 +87,19 @@ test('luca-home.js runs on www.luca.com.tr and reads login URLs from popup()/win
   assert.equal("popup('https://agiris.luca.com.tr/TicariSSO/giris.erp')".match(pattern)[1], 'https://agiris.luca.com.tr/TicariSSO/giris.erp');
   assert.equal("MyWindow=window.open('https://agiris.luca.com.tr/LUCASSO/giris.erp','MyWindow',width=720,height=390); return false;".match(pattern)[1], 'https://agiris.luca.com.tr/LUCASSO/giris.erp');
 });
+
+test('luca-main-world.js runs in the page world at document_start on agiris', () => {
+  const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
+  const entry = manifest.content_scripts.find((item) => item.js.includes('luca-main-world.js'));
+  assert.ok(entry);
+  assert.equal(entry.world, 'MAIN');
+  assert.equal(entry.run_at, 'document_start');
+  assert.ok(entry.matches.includes('https://agiris.luca.com.tr/*'));
+});
+
+test('all automatic clicks wait AUTO_CLICK_DELAY_MS (1 s)', () => {
+  const source = fs.readFileSync('content.js', 'utf8');
+  assert.match(source, /const AUTO_CLICK_DELAY_MS = 1000;/);
+  assert.equal((source.match(/setTimeout\([^;]*AUTO_CLICK_DELAY_MS\)/g) || []).length, 4);
+  assert.doesNotMatch(source, /\.click\(\), \d+\)/);
+});

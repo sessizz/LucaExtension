@@ -29,7 +29,7 @@ olmayan hesaplarda eski captcha çözümü aynen çalışmaya devam etmeli.
 - Popup: QR yapıştır (Ctrl+V) / sürükle / dosya seç, QR sil, firma listesinde canlı kod + kalan süre
   (tıkla → kopyala), JSON dışa/içe aktarma (yedek), "yeni sekmede aç".
 - Content script: login panelinde seçilen firma `sessionStorage`'a yazılır (10 dk geçerli, tek kullanımlık).
-  OTP kutusu görünce: seçili firma + anahtar varsa kodu yazar, `Tamam`'a basar. Kalan süre < 3 sn ise
+  OTP kutusu görünce: seçili firma + anahtar varsa kodu yazar, `Tamam`'a basar. Kalan süre < 5 sn ise
   yeni kodu bekler. Seçim yoksa / ikinci deneme ise OTP ekranında firma paneli çıkar, tıkla → yaz + Tamam.
   Otomatik gönderim seçim başına bir kez (yanlış anahtarla sonsuz deneme döngüsü olmasın).
 

@@ -13,7 +13,8 @@ Chrome uzantisi; `https://agiris.luca.com.tr/` adresindeki Luca giris ekraninda 
   - Kodlar yerelde (Web Crypto, RFC 6238) uretilir; hicbir yere gonderilmez. Popup'ta her firmanin guncel kodu ve kalan suresi gorunur, tiklayinca kopyalanir.
   - Otomatik gonderim firma secimi basina bir kez yapilir; kod reddedilirse panelden firma tekrar secilir.
   - Bilgiler elle yazilsa da calisir: uye no + kullanici adi kayitli bir firmayla eslesirse (kullanici adi buyuk/kucuk harf duyarsiz) o firma panelden secilmis sayilir ve 2FA kodu otomatik yazilir.
-- Giris (ve 2FA/captcha) tamamlaninca gelen urun secim ekraninda girilen sisteme ait kutuya kendisi tiklar: `TicariSSO` girisinde **LUCA NET KOBI TICARI**, `LUCASSO` girisinde **LUCA MALI MUSAVIR PAKETI**. Bu ekrana sonradan elle donulurse dokunmaz.
+- Giris (ve 2FA/captcha) tamamlaninca gelen urun secim ekraninda girilen sisteme ait kutuya kendisi tiklar: `TicariSSO` girisinde **LUCA NET KOBI TICARI**, `LUCASSO` girisinde **LUCA MALI MUSAVIR PAKETI**. Bu ekrana sonradan elle donulurse dokunmaz. Secilen urun yeni pencere yerine ayni sekmede acilir.
+- Otomatik doldurma ile tiklama (GIRIS, Tamam, urun kutusu) arasinda 1 saniye beklenir.
 - `www.luca.com.tr` uzerindeki "Sistem Giris" butonlari giris ekranini acilir pencere yerine ayni sekmede acar.
 - 2FA aktif olmayan hesaplarda captcha cozumu eskisi gibi calisir: sayfada hangisi cikarsa o doldurulur.
 - Captcha cozumu icin OpenAI uyumlu (`/chat/completions`) bir gorsel model kullanir:
