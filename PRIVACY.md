@@ -1,6 +1,6 @@
 # Gizlilik Politikasi
 
-Luca Captcha, 2FA ve Firma Doldurucu uzantisi, yalnizca `https://agiris.luca.com.tr/` adresindeki Luca giris ekraninda kullaniciya yardimci olmak icin calisir.
+Luca Captcha, 2FA ve Firma Doldurucu uzantisi, yalnizca `https://agiris.luca.com.tr/` adresindeki Luca giris ekraninda kullaniciya yardimci olmak icin calisir. `https://www.luca.com.tr/` sayfasinda yalnizca "Sistem Giris" butonlarinin giris ekranini ayni sekmede acmasini saglar; bu sayfadan veri okumaz veya saklamaz.
 
 ## Saklanan Veriler
 

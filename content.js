@@ -580,7 +580,69 @@ function ensureLucaPanel(mode) {
     }
 }
 
+// --- Giris sonrasi urun secim ekrani (orn. TicariSSO/main.erp) ---
+// Giris, 2FA veya captcha ekrani goruldukten sonra gelen urun ekraninda girilen sisteme
+// ait kutuya tiklanir. Bu ekrana sonradan elle donulurse dokunulmaz.
+const LOGIN_FLOW_KEY = "lucaLoginFlowAt";
+const LOGIN_FLOW_TTL_MS = 5 * 60 * 1000;
+const PRODUCT_TILE_BY_PATH = [
+    { prefix: "/ticarisso/", selector: ".uygText.lucaNetBG" },  // LucaNET KOBI Ticari
+    { prefix: "/lucasso/", selector: ".uygText.lucaMmpBG" }     // Luca Mali Musavir Paketi
+];
+let productTileHandled = false;
+
+function markLoginFlow() {
+    try {
+        sessionStorage.setItem(LOGIN_FLOW_KEY, String(Date.now()));
+    } catch (e) {
+        // yok sayilir
+    }
+}
+
+function takeLoginFlow() {
+    try {
+        const at = Number(sessionStorage.getItem(LOGIN_FLOW_KEY));
+        sessionStorage.removeItem(LOGIN_FLOW_KEY);
+        return !!at && Date.now() - at < LOGIN_FLOW_TTL_MS;
+    } catch (e) {
+        return false;
+    }
+}
+
+function findProductTile(tiles) {
+    const path = location.pathname.toLowerCase();
+    const rule = PRODUCT_TILE_BY_PATH.find((item) => path.startsWith(item.prefix));
+    const preferred = rule && document.querySelector(rule.selector);
+    if (preferred) return preferred;
+    // Adres taninmazsa tek kutu varsa o secilir; birden cok varsa kullaniciya birakilir.
+    return tiles.length === 1 ? tiles[0] : null;
+}
+
+function checkForProductChooser() {
+    if (productTileHandled) return false;
+    const tiles = Array.from(document.querySelectorAll(".uygText[onclick]"));
+    if (!tiles.length) return false;
+
+    productTileHandled = true;
+    if (!takeLoginFlow()) return true;
+
+    const tile = findProductTile(tiles);
+    if (!tile) return true;
+
+    // gonder(...) sayfanin kendi betiginde tanimli; sayfa tamamen yuklenince tiklanir.
+    const click = () => setTimeout(() => tile.click(), 300);
+    if (document.readyState === "complete") click();
+    else window.addEventListener("load", click, { once: true });
+    return true;
+}
+
 function checkForLucaPage() {
+    if (checkForProductChooser()) return;
+
+    if (findOtpInput() || findLoginInputs() || document.getElementById("captcha-input")) {
+        markLoginFlow();
+    }
+
     // 2FA ekrani once kontrol edilir; giris alanlari ayni sayfada gizli kalsa bile kod yazilir.
     if (findOtpInput()) {
         ensureLucaPanel("otp");

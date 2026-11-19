@@ -77,3 +77,13 @@ test('content script loads providers.js before content.js', () => {
   const js = manifest.content_scripts[0].js;
   assert.ok(js.indexOf('providers.js') !== -1 && js.indexOf('providers.js') < js.indexOf('content.js'));
 });
+
+test('luca-home.js runs on www.luca.com.tr and reads login URLs from popup()/window.open()', () => {
+  const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
+  const entry = manifest.content_scripts.find((item) => item.js.includes('luca-home.js'));
+  assert.ok(entry && entry.matches.includes('https://www.luca.com.tr/*'));
+  const source = fs.readFileSync('luca-home.js', 'utf8');
+  const pattern = new RegExp(source.match(/LOGIN_OPENER_PATTERN = \/(.+)\/;/)[1]);
+  assert.equal("popup('https://agiris.luca.com.tr/TicariSSO/giris.erp')".match(pattern)[1], 'https://agiris.luca.com.tr/TicariSSO/giris.erp');
+  assert.equal("MyWindow=window.open('https://agiris.luca.com.tr/LUCASSO/giris.erp','MyWindow',width=720,height=390); return false;".match(pattern)[1], 'https://agiris.luca.com.tr/LUCASSO/giris.erp');
+});
