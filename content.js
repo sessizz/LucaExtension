@@ -1,5 +1,5 @@
 // Otomatik doldurma ile tiklama arasindaki bekleme. Cok hizli tiklayinca site yetisemiyor.
-const AUTO_CLICK_DELAY_MS = 1000;
+const AUTO_CLICK_DELAY_MS = 500;
 
 let hasRun = false;
 let searchInterval;

@@ -5,7 +5,7 @@
 const BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 const OTP_ALGORITHMS = { SHA1: "SHA-1", SHA256: "SHA-256", SHA512: "SHA-512" };
 // Kodun bitmesine bu kadar sure kala yazmak yerine yeni kod beklenir
-// (yazdiktan sonra Tamam'a basmadan once 1 sn beklendigi icin pay birakilir).
+// (yazdiktan sonra Tamam'a basmadan once kisa bir bekleme oldugu icin pay birakilir).
 const OTP_MIN_REMAINING_MS = 5000;
 const OTP_WAIT_MARGIN_MS = 250;
 

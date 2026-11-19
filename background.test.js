@@ -97,9 +97,9 @@ test('luca-main-world.js runs in the page world at document_start on agiris', ()
   assert.ok(entry.matches.includes('https://agiris.luca.com.tr/*'));
 });
 
-test('all automatic clicks wait AUTO_CLICK_DELAY_MS (1 s)', () => {
+test('all automatic clicks wait AUTO_CLICK_DELAY_MS (500 ms)', () => {
   const source = fs.readFileSync('content.js', 'utf8');
-  assert.match(source, /const AUTO_CLICK_DELAY_MS = 1000;/);
+  assert.match(source, /const AUTO_CLICK_DELAY_MS = 500;/);
   assert.equal((source.match(/setTimeout\([^;]*AUTO_CLICK_DELAY_MS\)/g) || []).length, 4);
   assert.doesNotMatch(source, /\.click\(\), \d+\)/);
 });
